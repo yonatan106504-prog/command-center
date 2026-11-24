@@ -1,0 +1,46 @@
+name: Run Command Center Agent
+
+on:
+  workflow_dispatch:
+    inputs:
+      agent:
+        description: 'שם הסוכן להפעלה'
+        required: true
+        type: string
+      task:
+        description: 'המשימה או השאילתה עבור הסוכן'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  execute-agent:
+    runs-on: ubuntu-latest
+    steps:
+      - name: הורדת הקוד
+        uses: actions/checkout@v4
+
+      - name: הגדרת פייתון
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: התקנת ספריות
+        run: pip install google-genai pydantic yfinance
+
+      - name: הפעלת הסוכן הנבחר
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          AGENT_TASK: ${{ github.event.inputs.task }}
+        run: python agents/${{ github.event.inputs.agent }}.py
+
+      - name: שמירת תוצאות לארכיון
+        run: |
+          git config user.name "Command Center Bot"
+          git config user.email "bot@command-center.local"
+          mkdir -p data
+          git add data/
+          git commit -m "עדכון פלט סוכן: ${{ github.event.inputs.agent }}" || exit 0
+          git push
